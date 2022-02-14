@@ -7,18 +7,18 @@ Created on Sat Jan  8 09:11:03 2022
 import streamlit as st
 import pandas as pd
 #import numpy as np
-import sqlite3
+#import sqlite3
 
 #import configparser
 #import plotly.express as px
 
-import pathlib
-from contextlib import contextmanager
-from pathlib import Path
-from uuid import uuid4
-from openpyxl import load_workbook
+#import pathlib
+#from contextlib import contextmanager
+#from pathlib import Path
+#from uuid import uuid4
+#from openpyxl import load_workbook
 
-import base64
+#import base64
 
 
 #%% ALTA NOMINA - PRINCIPAL
