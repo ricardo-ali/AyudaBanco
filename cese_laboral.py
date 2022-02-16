@@ -6,307 +6,337 @@ Created on Sat Jan  8 09:11:03 2022
 """
 import streamlit as st
 import pandas as pd
-#import numpy as np
-#import sqlite3
 
-#import configparser
-#import plotly.express as px
-
-#import pathlib
-#from contextlib import contextmanager
-#from pathlib import Path
-#from uuid import uuid4
-#from openpyxl import load_workbook
-
-#import base64
+   
+@st.cache
+def convert_df(df):
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv(sep="|", header=False, index=False).encode('utf-8')
 
 
-#%% ALTA NOMINA - PRINCIPAL
+def completar_ceros(cadena, nros_chars):
+    return '0'*(nros_chars - len(str(cadena))) + cadena
+
+def completar_espacios(cadena, nros_chars):
+       
+    texto_inicial = (" "*(nros_chars - len(str(cadena))))
+    
+    texto_final = str(cadena) + str(texto_inicial)
+    
+    return texto_final
+
+def check_obligatorio(cadena, num_char, flag_obligatorio):
+    if cadena == " "*num_char or cadena == "0"*num_char or flag_obligatorio==True:
+        return True
+
+
+#%% CESE LABORAL - PRINCIPAL
 def cese_laboral_principal():
+    st.title('Cese Laboral')
     
+        #%% DATOS INICIALES
     
-    #Pone una imagen al principio de la pagina principal
-    # LOGO_IMAGE = "./media/saluki2.jpg"
-    # st.markdown("""<style>.container {display: flex;}.logo-text 
-    #                 {font-weight:700 !important;font-size:50px !important;
-    #                  color: #f9a01b !important;padding-top: 5px !important;}.logo-img 
-    #                  {float:right;}</style>""", unsafe_allow_html=True)
-    # st.markdown(f"""<div class="container">
-    #                 <img class="logo-img" src="data:image/png;base64,
-    #                 {base64.b64encode(open(LOGO_IMAGE, "rb").read()).decode()}">
-    #                 <p class="logo-text"></p>
-    #                 </div>
-    #                 """,
-    #                 unsafe_allow_html=True
-    #                 )
+    global csv
+    flag_obligatorio = False
+    csv = ""
+    #creo un dataframe vacio para usar mas tarde
+    columnas=[  "valor_sucursal",
+                "valor_empresa",
+                "valor_agente",
+                "valor_apellido_nombre",
+                "valor_tipo_persona",
+                "valor_tipo_documento",
+                "valor_numero_documento",
+                "valor_cuil",
+                "valor_calle_particular",
+                "valor_numero_particular",
+                "valor_piso_particular",
+                "valor_dpto_particular",
+                "valor_telefono_particular",
+                "valor_localidad_particular",
+                "valor_postal_particular",
+                "valor_provincia_particular",
+                "valor_filler",
+                ]
+    
+        
+    df_ = pd.DataFrame(columns=columnas)
+    df_ = df_.fillna(0)
+  
+    # persist state of dataframe
+    if 'df' not in st.session_state:
+        st.session_state.df = df_
 
-
-    st.title('SALUKI (Upload File)')
+  
     
-    #PRIMERO DEFINO LAS FUNCIONES LUEGO LAS LLAMO
-    
-    #funcion para cargar tablas de sqlite3 en Saluki
-    @contextmanager
-    def sqlite_connect(db_bytes):
-        fp = Path(str(uuid4()))
-        fp.write_bytes(db_bytes.getvalue())
-        conn = sqlite3.connect(str(fp))
-    
-        try:
-            yield [conn, fp.absolute()]
-        finally:
-            conn.close()
-            fp.unlink()
-    
-    #funcion que genera el link y archivo sqlite para descargar
-    @st.cache
-    def get_binary_file_downloader_html(bin_file, file_label='File'):
-        with open(bin_file, 'rb') as f:
-            data = f.read()
-        bin_str = base64.b64encode(data).decode()
-        href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{file_label}">Download {file_label}</a>' 
-        return href
-    
-    #el codigo mas rapido que encontre para leer las hojas de un excel xlxs
-    @st.cache
-    def get_sheet_details(file_path):  
-        from zipfile import ZipFile
-        from bs4 import BeautifulSoup  # you also need to install "lxml" for the XML parser
-        
-        with ZipFile(file_path) as zipped_file:
-            summary = zipped_file.open(r'xl/workbook.xml').read()
-        soup = BeautifulSoup(summary, "xml")
-        sheets = [sheet.get("name") for sheet in soup.find_all("sheet")]
-        return sheets
-    
-#%% Saluki - ORIGEN DE DATOS
-        
-    @st.cache
-    def cargar_hojas_origen(uploaded_file_origen):
-        #Obtengo el archivo y la extension y la paso a minuscula
-        file_extension = pathlib.Path(uploaded_file_origen.name).suffix
-        file_extension = file_extension.lower()
-        
-        #si es un archivo version 2010 o posterior
-        #abre el archivo
-        if file_extension in [".xlsx", ".xlsm"]:
-            from zipfile import ZipFile
-            from bs4 import BeautifulSoup  # you also need to install "lxml" for the XML parser
+    with st.form("formulario_cese_laboral"):
             
-            with ZipFile(uploaded_file_origen) as zipped_file:
-                summary = zipped_file.open(r'xl/workbook.xml').read()
-            soup = BeautifulSoup(summary, "xml")
-            sheets = [sheet.get("name") for sheet in soup.find_all("sheet")]
+        texto_label = ["(*) CASA (Sucursal) - Valor Numérico de 4 caracteres máximo",
+                       "(*) EMPRESA (Servicio) - Valor Alfabético de 4 caracteres máximo",
+                       "(*) CODIGO AGENTE - Valor Numérico de 9 caracteres máximo",
+                       "(*) APELLIDO y NOMBRE DEL TITULAR - Valor Alfabético de 30 caracteres máximo",
+                       "(*) TIPO DE PERSONA - Valor Numérico de 1 caracteres máximo",
+                       "(*) TIPO DE DOCUMENTO",
+                       "(*) NUMERO DE DOCUMENTO",
+                       "(*) CUIL",
+                       "(*) CALLE - Valor Alfabético de 15 caracteres máximo",
+                       "NUMERO - Valor Alfabético de 5 caracteres máximo",
+                       "PISO - Valor Alfabético de 2 caracteres máximo",
+                       "DEPARTAMENTO - Valor Alfabético de 2 caracteres máximo",
+                       "TELEFONO - Valor Alfabético de 8 caracteres máximo",
+                       "(*) LOCALIDAD - Valor Alfabético de 15 caracteres máximo",
+                       "(*) CODIGO POSTAL - Valor Numérico de 4 caracteres máximo", 
+                       "(*) PROVINCIA - Valor Numérico de 3 caracteres máximo",
+                       "FILLER  - Valor Alfabético de 13 caracteres máximo",
+                       ]
                        
-        else:
-            #es un archivo xls, abro el archivo
-            import xlrd
-            
-            book = xlrd.open_workbook(file_contents=uploaded_file_origen.getvalue(), 
-                                      on_demand = True)
-            sheets = book.sheet_names()
-            book.release_resources()  #cierro objeto y libero memoria
-            del book
-            
-        return sheets
-    
-    @st.cache
-    def cargar_tablas_destino(uploaded_file_destino):
-        with sqlite_connect(uploaded_file_destino) as conn:
-            
-            
-            #Abre el archivo SQL con la cadena correspondiente
-            with open('sql/lista_tablas_db.sql', 'r') as file:
-                strSQL = file.read().replace('\n', ' ')
-            
-            #carga las tablas
-            data_tables = pd.read_sql(strSQL, conn[0])
-            
-            #devuelve una lista con los nombres de tablas
-            tablas = data_tables['name'].values.tolist()
-            
-            return tablas
-    
-    @st.cache
-    def cargar_campos_excel(uploaded_file_origen, combobox_hojas):
-        #lista las cabeceras del archivo de excel
-        #Metodo con openpyxl (rapido)
-        wb = load_workbook(filename=uploaded_file_origen, read_only=True)
-        sheet = wb[combobox_hojas]
-
-        nombre_columnas_excel=[]
-        for cell in sheet[1]:
-            nombre_columnas_excel.append(cell.value)            
+                               
         
-        #cierro el archivo xlsx
-        wb.close()    
+        texto_tooltip = ["",
+                         "",
+                         "",
+                         "",
+                         "1 = Masculino, 2 = Femenino, 3 = Extranjero",
+                         "",
+                         "",
+                         "",
+                         "",
+                         "De no existir integrar con S/N",
+                         "",
+                         "",
+                         "",
+                         "",
+                         "",
+                         "",
+                         "",
+                         ]
+                         
+                         
+                         
         
-        return nombre_columnas_excel
-    
-    @st.cache
-    def cargar_campos_sqlite(uploaded_file_destino, combobox_tabla_destino):
-    
-        #lista los campos del archivo SQLite
-        #Obtengo los nombres de columnas de la tabla SQLite
-        with sqlite_connect(uploaded_file_destino) as conn:
-            
-            #Abre el archivo SQL con la cadena correspondiente
-            with open('sql/cargar_campos_tabla.sql', 'r') as file:
-                strSQL = file.read().replace('\n', ' ')
-                strSQL = strSQL.replace('+tabla+', str(combobox_tabla_destino))
+        
+        num_chars = [4,4,9,30,1,2,8,15,15,5,2,2,8,15,4,3,13]
+        
                 
-            #carga las tablas
-            data = pd.read_sql(strSQL , conn[0])
-            nombre_columnas_sqlite = list(data.columns)    
-            
-            return nombre_columnas_sqlite
-    
-    @st.cache
-    def abrir_excel_en_dataframe(uploaded_file_origen, combobox_hojas):
-        # Abre el excel en un Data Frame
-        df = pd.read_excel(uploaded_file_origen, sheet_name=combobox_hojas)
-        max_row=len(df)
-        return [df, max_row]
-    
-     
-    
-    
-    #subo archivo Origen
-    uploaded_file_origen = st.file_uploader("Seleccione el archivo Origen de Datos:",
-                                     ['xls', 'xlsx', 'xlsm'],
-                                     accept_multiple_files = False)
-    
-    
-    if uploaded_file_origen is not None:
+        tipo_persona = ["1","2","3"]
+        
+        tipo_documento = ["89","90","94","96","97"]
+        
+        provincia = ["001", "002", "003", "004", "005", "006", "007", "008",
+                     "009", "010", "011", "012", "013", "014", "015", "016",
+                     "017", "018", "019", "020", "021", "022","023","024"]
+        
+        #%% DATOS
                 
-        #cargo el cache o busco las hojas del Excel
-        hojas_excel = cargar_hojas_origen(uploaded_file_origen)
-        combobox_hojas = st.selectbox(
-             'Seleccione la hoja de Excel (Origen):',
-             hojas_excel)
-                            
-        st.markdown("___")
-
-
-#%% Saluki - DESTINO DE DATOS
+        st.markdown("(*) Campos Obligatorios")
         
-        uploaded_file_destino = st.file_uploader("Seleccione el archivo Destino de Datos:",
-                                         [".db", ".sqlite", ".db3", ".sqlite3"],
-                                         accept_multiple_files = False)
+        n = 0
+        valor_sucursal = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_sucursal = completar_ceros(valor_sucursal,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_sucursal, num_chars[n],flag_obligatorio)
         
-        #Si seleccionó un archivo, lo abre
-        if uploaded_file_destino:
-            #cargo el cache o busco las hojas del Excel
-            tablas_sqlite = cargar_tablas_destino(uploaded_file_destino)
+        
+        n = 1
+        valor_empresa = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_empresa = completar_espacios(valor_empresa,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_empresa, num_chars[n],flag_obligatorio)
+        
+        n = 2
+        valor_agente = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_agente = completar_ceros(valor_agente,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_agente, num_chars[n],flag_obligatorio)
+        
+        
+        n = 3
+        valor_apellido_nombre = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_apellido_nombre = completar_espacios(valor_agente,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_apellido_nombre, num_chars[n],flag_obligatorio)
+        
+                
+        n = 4
+        valor_tipo_persona = st.selectbox(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      options=tipo_persona,
+                                      key=n)
+        valor_tipo_persona = completar_ceros(valor_tipo_persona,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_tipo_persona, num_chars[n],flag_obligatorio)
+        
+        
+        n = 5
+        valor_tipo_documento = st.selectbox(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      options=tipo_documento,
+                                      key=n)
+        valor_tipo_documento = completar_ceros(valor_tipo_documento,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_tipo_documento, num_chars[n],flag_obligatorio)
+        
+        
+        n = 6
+        valor_numero_documento = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_numero_documento = completar_ceros(str(valor_numero_documento),num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_numero_documento, num_chars[n],flag_obligatorio)
+                   
+        
+        n = 7
+        valor_cuil = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_cuil = completar_espacios(valor_cuil,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_cuil, num_chars[n],flag_obligatorio)
+        
+        
+        n = 8
+        valor_calle_particular = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_calle_particular = completar_espacios(valor_calle_particular,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_calle_particular, num_chars[n],flag_obligatorio)
+        
+        
+        n = 9
+        valor_numero_particular = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_numero_particular = completar_espacios(valor_numero_particular,num_chars[n])
+                
+        
+        n = 10
+        valor_piso_particular = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_piso_particular = completar_espacios(valor_piso_particular,num_chars[n])
+        
+        
+        
+        n = 11
+        valor_dpto_particular = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_dpto_particular = completar_ceros(valor_dpto_particular,num_chars[n])
+        
+        
+        
+        n = 12
+        valor_telefono_particular = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_telefono_particular = completar_espacios(valor_telefono_particular,num_chars[n])
+        
+        
+        
+        n = 13
+        valor_localidad_particular = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_localidad_particular = completar_espacios(valor_localidad_particular,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_localidad_particular, num_chars[n],flag_obligatorio)
+        
+        
+        n = 14
+        valor_postal_particular = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_postal_particular = completar_ceros(valor_postal_particular,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_postal_particular, num_chars[n],flag_obligatorio)
+        
+        
+        n = 15
+        valor_provincia_particular = st.selectbox(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      options=provincia,
+                                      key=n)
+        valor_provincia_particular = completar_ceros(valor_provincia_particular,num_chars[n])
+        flag_obligatorio = check_obligatorio(valor_provincia_particular, num_chars[n],flag_obligatorio)
+        
+        
+        n = 16
+        valor_filler = st.text_input(label=texto_label[n], 
+                                      help=texto_tooltip[n],
+                                      max_chars=num_chars[n],
+                                      key=n)
+        valor_filler = completar_espacios(valor_filler,num_chars[n])
+        
+        
+        #%% CHEQUEAR QUE INFO OBLIGATORIA
+        nuevo_registro =  [ valor_sucursal,
+                            valor_empresa,
+                            valor_agente,
+                            valor_apellido_nombre,
+                            valor_tipo_persona,
+                            valor_tipo_documento,
+                            valor_numero_documento,
+                            valor_cuil,
+                            valor_calle_particular,
+                            valor_numero_particular,
+                            valor_piso_particular,
+                            valor_dpto_particular,
+                            valor_telefono_particular,
+                            valor_localidad_particular,
+                            valor_postal_particular,
+                            valor_provincia_particular,
+                            valor_filler,
+                            ]
             
-            #agrega un combo para seleccionar las tabla a visualizar
-            combobox_tabla_destino = st.selectbox(
-                 'Seleccione la tabla que desea usar como destino:',
-                 (tablas_sqlite))
-
-#%% Saluki - COMPARAR COLUMNAS
-
-            st.markdown("___")
-            
-            st.markdown("### PREVISUALIZADOR")
-            st.write("Las columnas que desea copiar deben coincidir \
-                      en orden y en concepto (ej: ID_PRODUCT | id_prod)")
-            
-            #busca en cache o llama a la funcion con el nombre de columnas excel
-            nombre_columnas_excel = cargar_campos_excel(uploaded_file_origen, 
-                                                        combobox_hojas)
-            
-            #busca en cache o llama a la funcion con el nombre de campos en sqlite
-            nombre_columnas_sqlite = cargar_campos_sqlite(uploaded_file_destino, 
-                                                          combobox_tabla_destino)
-            
-            col1, col2 = st.columns(2)
-            
-            col1.subheader("Origen")
-            col1.write("Archivo: " + uploaded_file_origen.name)
-            col1.write("Hoja: " + combobox_hojas)
-            col1.write("Columnas: " + str(len(nombre_columnas_excel)))
-            col1.table(nombre_columnas_excel)
-            
-            
-            col2.subheader("Destino")
-            col2.write("Archivo: "  + uploaded_file_destino.name)
-            col2.write("Tabla: " + combobox_tabla_destino)
-            col2.write("Columnas: " + str(len(nombre_columnas_sqlite)))
-            col2.table(nombre_columnas_sqlite)
-
-            
-            #Selecciona la opcion de copia de datos
-            opcion1 = 'Borrar datos en tabla destino antes de copiar'
-            opcion2 = 'Agregar datos a la tabla destino (no borrar)'
-
-            opcion_copia = st.radio("¿Qué desea hacer durante la copia?",
-                                    (opcion1, opcion2))
-            
-            
-               
-            #Instancio y controlo cuando se presione el boton
-            if st.button("Exportar..."):
-                #with st.spinner('Por favor aguarde, se están aplicando los cambios...'):
-                    
-                    st.write("Cargado excel en Dataframe...")
-                    #cargo el resultado de la carga del dataframe y camntidad de registros
-                    resultado_df = abrir_excel_en_dataframe(uploaded_file_origen, 
-                                                            combobox_hojas)
-                    
-                    #Si se seleccionó borrar
-                    if opcion_copia == opcion1:
-                        with sqlite_connect(uploaded_file_destino) as conn:
-                            
-                            st.write("Borrada la tabla")
-                            
-                            crsr = conn[0].cursor()
-                            crsr.execute("DELETE FROM " + combobox_tabla_destino + ";")
-                            conn[0].commit()
-                            
-                            #Copio el dataframe directamente en la base de datos, 
-                            #reescribiendo datos existentes
                         
-                            resultado_df[0].to_sql(combobox_tabla_destino, 
-                                      con=conn[0], 
-                                      if_exists='replace', 
-                                      index=False)
-                            
-                            st.write("Copiados " + str(resultado_df[1]) + " registros a la tabla")
-                            
-                            #Compacto la BD
-                            st.write("Limpiando y Compactando Base de Datos...")                                                                
-                            conn[0].execute("VACUUM")
-                            
-                            #Agrego el link para descargar el archivo
-                            st.write("Generando link de descarga...")
-                            st.markdown(get_binary_file_downloader_html(bin_file=conn[1], 
-                                                                        file_label=str(uploaded_file_destino.name)), 
-                                        unsafe_allow_html=True)
-                            
-                            
-                    #Si se seleccionó agregar
-                    else:
-                         with sqlite_connect(uploaded_file_destino) as conn:
-                             
-                                           
-                             #Copio el dataframe directamente en la base de datos, 
-                             #agregando a los datos existentes
-                             resultado_df[0].to_sql(combobox_tabla_destino, 
-                                       con=conn[0], 
-                                       if_exists='append', 
-                                       index=False)
-                             
-                             st.write("Agregados " + str(resultado_df[1]) + " registros a la tabla")
-                             
-                             #Compacto la BD
-                             st.write("Limpiando y Compactando Base de Datos...")
-                             conn[0].execute("VACUUM")
-                            
-                             st.write("Generando link de descarga...")
-                             #Agrego el link para descargar el archivo
-                             st.markdown(get_binary_file_downloader_html(bin_file=conn[1], 
-                                                                         file_label=str(uploaded_file_destino.name)), 
-                                         unsafe_allow_html=True)
-                        
+        largo_texto = len(''.join(nuevo_registro))
+        st.write("Cantidad de Caracteres en Bloque (debe ser 140): " + str(largo_texto))
+        
+        
+        #%% AGREGAR A LA TABLA
+        
+        # Instancio el boton
+        submitted = st.form_submit_button("Agregar")
+        
+        # cuando se presiona el boton agregar
+        if submitted:
+            if flag_obligatorio == True:
+                st.markdown("### COMPLETAR TODOS LOS CAMPOS OBLIGATORIOS")
+            else:                                    
+                #Agrego la lista con los nuevos valores al dataframe
+                #Si no uso el session_state, pierdo el historico agregado            
+                st.session_state.df.loc[len(st.session_state.df)] = nuevo_registro
+                
+                #Muestro la tabla con los datos
+                st.dataframe(st.session_state.df)    
+                
+                
+                #Convierto a txt            
+                csv = convert_df(st.session_state.df)
+                
+                #Le saco los separadores del tipo | para que sean
+                csv = csv.replace(b'|',b'')
+            
+    
+        #%% BOTON PARA DESCARGAR
+    
+    #agrego un boton para exportar a txt
+    st.download_button(
+                         label="Descargar como TXT",
+                         data=csv,
+                         file_name='cese_laboral.txt',
+                         mime='text/plain',
+                     )
                 

@@ -23,8 +23,8 @@ st.set_page_config(
  )
 
 #Agrego la Barra lateral para seleccionar la aplicacion a usar
-aplicaciones = ['Alta Nomina',]
-                #'Cese Laboral']
+aplicaciones = ['Alta Nomina',
+                'Cese Laboral']
 
 
 barra_lateral = st.sidebar.title("Ayuda Banco")
