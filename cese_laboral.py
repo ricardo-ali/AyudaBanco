@@ -64,7 +64,7 @@ def cese_laboral_principal():
     df_ = df_.fillna(0)
   
     # persist state of dataframe
-    if 'df' not in st.session_state:
+    if 'df2' not in st.session_state:
         st.session_state.df2 = df_
 
   
