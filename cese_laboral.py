@@ -65,7 +65,7 @@ def cese_laboral_principal():
   
     # persist state of dataframe
     if 'df' not in st.session_state:
-        st.session_state.df = df_
+        st.session_state.df2 = df_
 
   
     
@@ -317,14 +317,14 @@ def cese_laboral_principal():
             else:                                    
                 #Agrego la lista con los nuevos valores al dataframe
                 #Si no uso el session_state, pierdo el historico agregado            
-                st.session_state.df.loc[len(st.session_state.df)] = nuevo_registro
+                st.session_state.df2.loc[len(st.session_state.df2)] = nuevo_registro
                 
                 #Muestro la tabla con los datos
-                st.dataframe(st.session_state.df)    
+                st.dataframe(st.session_state.df2)    
                 
                 
                 #Convierto a txt            
-                csv = convert_df(st.session_state.df)
+                csv = convert_df(st.session_state.df2)
                 
                 #Le saco los separadores del tipo | para que sean
                 csv = csv.replace(b'|',b'')
